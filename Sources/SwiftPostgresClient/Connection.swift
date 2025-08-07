@@ -50,6 +50,8 @@ public actor Connection {
     private let notificationContinuation: AsyncStream<ServerMessage>.Continuation
     private let flushBytes: [UInt8] = [0x48, 0x00, 0x00, 0x00, 0x04]
     
+    private var isIntentionallyClosed = false  // Add this new property
+    
     private init(socket: NetworkConnection, certificateHash: Data) {
         self.socket = socket
         self.certificateHash = certificateHash
@@ -90,6 +92,7 @@ public actor Connection {
     }
     
     public func close() async {
+        isIntentionallyClosed = true  // Set flag before closing
         let terminateRequest = TerminateRequest()
         try? await sendRequest(terminateRequest) // consumes any Error
         state = .closed
@@ -110,7 +113,10 @@ public actor Connection {
             do {
                 try await decodeMessage()
             } catch {
-                print("Error receiving message: \(error)")
+                // Only print error if connection wasn't intentionally closed
+                if !isIntentionallyClosed {
+                    print("Error receiving message: \(error)")
+                }
                 break
             }
         }
