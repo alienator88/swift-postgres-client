@@ -32,7 +32,10 @@ struct NetworkConnection: Sendable {
         }
         
         try await withCheckedThrowingContinuation {  (continuation: CheckedContinuation<Void, Error>)  in
+            var isResumed = false  // Add this flag to prevent multiple resumes
             connection.send(content: data, completion: .contentProcessed { error in
+                guard !isResumed else { return }  // Prevent multiple resumes
+                isResumed = true
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
@@ -48,7 +51,10 @@ struct NetworkConnection: Sendable {
         }
         
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+            var isResumed = false  // Add this flag to prevent multiple resumes
             connection.receive(minimumIncompleteLength: 1, maximumLength: maxLength) { data, _, isComplete, error in
+                guard !isResumed else { return }  // Prevent multiple resumes
+                isResumed = true
                 if let error {
                     continuation.resume(throwing: error)
                 } else if let data {

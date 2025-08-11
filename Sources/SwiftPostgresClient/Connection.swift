@@ -351,13 +351,18 @@ fileprivate func createPostgresConnection(host: String, port: UInt16, useTLS: Bo
     let connection = NWConnection(host: .init(host), port: .init(rawValue: port)!, using: parameters)
     
     try await withCheckedThrowingContinuation { cont in
+        var isResumed = false  // Add this flag to prevent multiple resumes
         connection.stateUpdateHandler = { state in
+            guard !isResumed else { return }  // Prevent multiple resumes
             switch state {
             case .ready:
+                isResumed = true
                 cont.resume(returning: ())
             case .failed(let error):
+                isResumed = true
                 cont.resume(throwing: error)
             case .waiting(let reason):
+                isResumed = true
                 cont.resume(throwing: reason)
             default:
                 break
